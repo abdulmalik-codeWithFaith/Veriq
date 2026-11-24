@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+  Veriq design tokens (Tailwind v4).
+  ink    = headings, footer       brand = buttons, links, focus
+  seal   = "genuine" results      amber = "suspicious" results
+  danger = "invalid" results      paper = page background, line = borders
+*/
+@theme inline {
+  --color-ink: #0b2b4a;
+  --color-brand: #1b4f8f;
+  --color-brand-dark: #143d70;
+  --color-seal: #0e8f63;
+  --color-seal-soft: #e3f5ec;
+  --color-amber: #8a5a00;
+  --color-amber-soft: #fbf0da;
+  --color-danger: #b42318;
+  --color-danger-soft: #fde7e4;
+  --color-paper: #f6f8fa;
+  --color-line: #d9e1e8;
+  --color-muted: #4f6378;
+
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

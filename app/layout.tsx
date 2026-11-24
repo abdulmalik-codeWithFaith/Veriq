@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Public_Sans, Source_Serif_4 } from "next/font/google";
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 import { Menu, ShieldCheck, X } from "lucide-react";
 import "./globals.css";
 
@@ -128,6 +129,12 @@ function Header() {
   );
 }
 
+async function CurrentYear() {
+  "use cache";
+  cacheLife("days");
+  return <>{new Date().getFullYear()}</>;
+}
+
 function Footer() {
   return (
     <footer className="bg-ink text-white">
@@ -156,7 +163,7 @@ function Footer() {
       </div>
       <div className="border-t border-white/15">
         <p className="mx-auto w-full max-w-6xl px-5 py-4 text-xs text-white/65 sm:px-8">
-          © {new Date().getFullYear()} Veriq. All rights reserved.
+          © <CurrentYear /> Veriq. All rights reserved.
         </p>
       </div>
     </footer>

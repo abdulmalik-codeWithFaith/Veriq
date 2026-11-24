@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -186,6 +187,46 @@ const customerBenefits = [
 
 const languages = ["English", "Français", "Yorùbá", "Hausa", "Igbo"];
 
+const photos = {
+  manufacturers: {
+    src: "https://images.unsplash.com/photo-1742485243447-fdf53d46bc30?auto=format&fit=crop&w=1200&q=75",
+    alt: "A factory worker sorting and folding finished goods",
+    credit: "EqualStock",
+    href: "https://unsplash.com/photos/a-worker-is-sorting-and-folding-finished-items-8jaXxFltPcc",
+  },
+  customers: {
+    src: "https://images.unsplash.com/photo-1706759755832-47e53579cc0d?auto=format&fit=crop&w=1200&q=75",
+    alt: "A person scanning a QR code with a phone",
+    credit: "Marielle Ursua",
+    href: "https://unsplash.com/photos/a-person-using-a-laptop-computer-with-a-qr-code-on-the-screen-v9bLIYP20xw",
+  },
+};
+
+function Photo({ photo }: { photo: (typeof photos)[keyof typeof photos] }) {
+  return (
+    <figure>
+      <Image
+        src={photo.src}
+        alt={photo.alt}
+        width={1200}
+        height={800}
+        sizes="(min-width: 1152px) 540px, (min-width: 768px) 45vw, 100vw"
+        className="aspect-[3/2] w-full rounded-lg object-cover"
+      />
+      <figcaption className="mt-2 text-xs text-muted">
+        Photo by{" "}
+        <a href={photo.href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+          {photo.credit}
+        </a>{" "}
+        on{" "}
+        <a href="https://unsplash.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+          Unsplash
+        </a>
+      </figcaption>
+    </figure>
+  );
+}
+
 function BenefitList({ items }: { items: string[] }) {
   return (
     <ul className="mt-5 space-y-3">
@@ -259,13 +300,15 @@ export default function Home() {
           <h2 className="max-w-2xl font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
             Made for manufacturers and the people who buy from them
           </h2>
-          <div className="mt-10 grid gap-12 md:grid-cols-2 md:gap-0">
-            <div className="md:pr-12">
-              <h3 className="text-xl font-semibold">For manufacturers</h3>
+          <div className="mt-10 grid gap-14 md:grid-cols-2 md:gap-12">
+            <div>
+              <Photo photo={photos.manufacturers} />
+              <h3 className="mt-6 text-xl font-semibold">For manufacturers</h3>
               <BenefitList items={manufacturerBenefits} />
             </div>
-            <div className="md:border-l md:border-line md:pl-12">
-              <h3 className="text-xl font-semibold">For customers</h3>
+            <div>
+              <Photo photo={photos.customers} />
+              <h3 className="mt-6 text-xl font-semibold">For customers</h3>
               <BenefitList items={customerBenefits} />
             </div>
           </div>

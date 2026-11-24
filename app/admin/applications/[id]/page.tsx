@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
 import { formatDate, getApplication, statusLabels, statusStyles } from "../../data";
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "Review application",
 };
 
-export default async function ReviewPage({
+async function Review({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -105,5 +106,19 @@ export default async function ReviewPage({
         )}
       </section>
     </div>
+  );
+}
+
+export default function ReviewPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={<p className="mx-auto w-full max-w-3xl px-5 py-14 text-muted sm:px-8">Loading application</p>}
+    >
+      <Review params={params} />
+    </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   formatDate,
   getApplications,
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 const tabs: ApplicationStatus[] = ["pending", "approved", "rejected"];
 
-export default async function AdminPage({
+async function ApplicationsList({
   searchParams,
 }: {
   searchParams: Promise<{ status?: string }>;
@@ -34,12 +35,7 @@ export default async function AdminPage({
     .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
-      <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-        Company applications
-      </h1>
-      <p className="mt-2 text-muted">Review new companies and decide who can use Veriq.</p>
-
+    <>
       <nav aria-label="Application status" className="mt-8 flex gap-1 border-b border-line">
         {tabs.map((tab) => {
           const isActive = tab === active;
@@ -112,6 +108,25 @@ export default async function AdminPage({
           </table>
         </div>
       )}
+    </>
+  );
+}
+
+export default function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+      <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
+        Company applications
+      </h1>
+      <p className="mt-2 text-muted">Review new companies and decide who can use Veriq.</p>
+
+      <Suspense fallback={<p className="mt-8 text-muted">Loading applications</p>}>
+        <ApplicationsList searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

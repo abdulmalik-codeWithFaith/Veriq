@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { destinationFor, requireCompany } from "@/lib/auth/session";
 import { Clock, MailCheck, ShieldCheck } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -19,7 +22,10 @@ const points = [
   },
 ];
 
-export default function PendingPage() {
+async function Pending() {
+  const session = await requireCompany();
+  if (session.status !== "pending") redirect(destinationFor(session));
+
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-14 sm:py-20">
       <span className="grid size-14 place-items-center rounded-full bg-amber-soft text-amber">
@@ -61,5 +67,13 @@ export default function PendingPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function PendingPage() {
+  return (
+    <Suspense fallback={<p className="mx-auto w-full max-w-xl px-5 py-14 text-muted">Loading</p>}>
+      <Pending />
+    </Suspense>
   );
 }

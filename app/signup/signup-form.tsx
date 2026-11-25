@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 
 type Values = { name: string; email: string; password: string; terms: boolean };
 type Errors = Partial<Record<keyof Values, string>>;
@@ -20,10 +22,21 @@ function validate(v: Values): Errors {
   return errors;
 }
 
-/* TODO: replace with your real API call (route handler, Supabase, Firebase, etc.). */
-async function createAccount(values: Values) {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  return { ok: true as const, email: values.email };
+async function createAccount(values: Values): Promise<string> {
+  const cred = await createUserWithEmailAndPassword(auth, values.email.trim(), values.password);
+  const idToken = await cred.user.getIdToken();
+  const res = await fetch("/api/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, name: values.name.trim() }),
+  });
+  await signOut(auth); // our secure cookie is the real session
+  if (!res.ok) {
+    const info = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    throw new Error(`session ${res.status}: ${info.error ?? "unknown"} ${info.detail ?? ""}`.trim());
+  }
+  const data = (await res.json()) as { destination: string };
+  return data.destination;
 }
 
 function FieldError({ id, message }: { id: string; message?: string }) {
@@ -101,10 +114,24 @@ export function SignupForm() {
 
     setSubmitting(true);
     try {
-      await createAccount(values);
-      router.push("/onboarding");
-    } catch {
-      setFormError("We couldn’t create your account. Check your connection and try again.");
+      const destination = await createAccount(values);
+      router.push(destination);
+    } catch (err) {
+      console.error("Signup failed:", err);
+      const code = (err as { code?: string }).code;
+      if (code === "auth/email-already-in-use") {
+        setErrors({ email: "An account with this email already exists. Try logging in." });
+        document.getElementById("email")?.focus();
+      } else if (code === "auth/weak-password") {
+        setErrors({ password: "Choose a stronger password." });
+      } else if (code === "auth/network-request-failed") {
+        setFormError("No internet connection. Check it and try again.");
+      } else if (process.env.NODE_ENV === "development") {
+        // Only while developing: show the real cause instead of a generic message.
+        setFormError(`Setup problem (only shown while developing): ${code ?? (err instanceof Error ? err.message : String(err))}`);
+      } else {
+        setFormError("We couldn’t create your account. Try again.");
+      }
       setSubmitting(false);
     }
   }

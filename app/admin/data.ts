@@ -1,7 +1,5 @@
-/*
-  SAMPLE DATA ONLY. Replace these helpers with real database queries.
-  Keep the same shapes so the pages keep working.
-*/
+import "server-only";
+import { fileUrl, getCompany, listCompanies, type Company } from "@/lib/companies";
 
 export type ApplicationStatus = "pending" | "approved" | "rejected";
 
@@ -16,70 +14,51 @@ export type Application = {
   status: ApplicationStatus;
   submittedAt: string; // ISO date
   rejectionReason?: string;
-  documents: { name: string; size: string; href: string }[]; // href = private, signed URL
+  logoUrl?: string; // admin-only link
+  documents: { name: string; size: string; href: string }[]; // admin-only links
 };
 
-const applications: Application[] = [
-  {
-    id: "app_1",
-    businessName: "Greenfield Beverages Ltd",
-    address: "12 Industrial Road, Ibadan, Oyo State",
-    email: "info@greenfield.example",
-    phone: "+234 800 000 0001",
-    website: "www.greenfield.example",
-    category: "Food and beverages",
-    status: "pending",
-    submittedAt: "2026-11-22T09:30:00Z",
-    documents: [
-      { name: "business-registration.pdf", size: "1.2 MB", href: "#" },
-      { name: "product-registration.pdf", size: "860 KB", href: "#" },
-    ],
-  },
-  {
-    id: "app_2",
-    businessName: "Sunrise Cosmetics Nigeria",
-    address: "5 Market Street, Lagos",
-    email: "hello@sunrise.example",
-    phone: "+234 800 000 0002",
-    category: "Cosmetics and personal care",
-    status: "pending",
-    submittedAt: "2026-11-23T14:05:00Z",
-    documents: [{ name: "certificate.pdf", size: "2.1 MB", href: "#" }],
-  },
-  {
-    id: "app_3",
-    businessName: "Northern Agro Supplies",
-    address: "8 Farm Lane, Kano",
-    email: "office@northernagro.example",
-    phone: "+234 800 000 0003",
-    category: "Agrochemicals and fertilizers",
-    status: "approved",
-    submittedAt: "2026-11-15T11:00:00Z",
-    documents: [{ name: "registration.pdf", size: "1.0 MB", href: "#" }],
-  },
-  {
-    id: "app_4",
-    businessName: "Quickfix Auto Parts",
-    address: "21 Garage Close, Abuja",
-    email: "sales@quickfix.example",
-    phone: "+234 800 000 0004",
-    category: "Auto parts",
-    status: "rejected",
-    submittedAt: "2026-11-10T08:15:00Z",
-    rejectionReason: "The business registration document was unclear. Upload a clear copy and apply again.",
-    documents: [{ name: "scan.jpg", size: "3.4 MB", href: "#" }],
-  },
-];
+function formatSize(bytes: number) {
+  return bytes < 1024 * 1024
+    ? `${Math.max(1, Math.round(bytes / 1024))} KB`
+    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function base(c: Company): Application {
+  return {
+    id: c.id,
+    businessName: c.businessName,
+    address: c.address,
+    email: c.email,
+    phone: c.phone,
+    website: c.website,
+    category: c.category,
+    status: c.status as ApplicationStatus,
+    submittedAt: c.submittedAt ?? "",
+    rejectionReason: c.rejectionReason,
+    documents: [],
+  };
+}
 
 export async function getApplications(): Promise<Application[]> {
-  return applications;
+  return (await listCompanies()).map(base);
 }
 
 export async function getApplication(id: string): Promise<Application | undefined> {
-  return applications.find((a) => a.id === id);
+  const c = await getCompany(id);
+  if (!c || c.status === "incomplete") return undefined;
+
+  const documents = c.documents.map((d) => ({
+    name: d.name,
+    size: formatSize(d.size),
+    href: fileUrl(c.id, d.path),
+  }));
+  const logoUrl = c.logoPath ? fileUrl(c.id, c.logoPath) : undefined;
+  return { ...base(c), documents, logoUrl };
 }
 
 export function formatDate(iso: string) {
+  if (!iso) return "";
   return new Date(iso).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",

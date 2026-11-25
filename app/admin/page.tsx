@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { requireAdmin } from "@/lib/auth/session";
 import {
   formatDate,
   getApplications,
@@ -25,7 +26,7 @@ async function ApplicationsList({
     ? (status as ApplicationStatus)
     : "pending";
 
-  // TODO: protect this page. Only the admin account may open it (check on the server).
+  await requireAdmin();
   const all = await getApplications();
   const counts = Object.fromEntries(
     tabs.map((t) => [t, all.filter((a) => a.status === t).length]),

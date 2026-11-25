@@ -1,17 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { destinationFor, requireCompany } from "@/lib/auth/session";
+import { getCompany } from "@/lib/companies";
 import { XCircle } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Application not approved",
 };
 
-/* TODO: replace both values with real data. The reason comes from the admin's review. */
+/* TODO: put your real support email here. */
 const SUPPORT_EMAIL = "support@yourdomain.com";
-const reason: string | null =
-  "Sample reason: the business registration document was unclear. Upload a clear copy and apply again.";
 
-export default function RejectedPage() {
+async function Rejected() {
+  const session = await requireCompany();
+  if (session.status !== "rejected") redirect(destinationFor(session));
+  const company = await getCompany(session.uid);
+  const reason = company?.rejectionReason ?? null;
+
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-14 sm:py-20">
       <span className="grid size-14 place-items-center rounded-full bg-danger-soft text-danger">
@@ -48,5 +55,13 @@ export default function RejectedPage() {
         </a>
       </div>
     </div>
+  );
+}
+
+export default function RejectedPage() {
+  return (
+    <Suspense fallback={<p className="mx-auto w-full max-w-xl px-5 py-14 text-muted">Loading</p>}>
+      <Rejected />
+    </Suspense>
   );
 }

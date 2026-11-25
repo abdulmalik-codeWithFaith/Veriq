@@ -3,21 +3,11 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, Loader2, X } from "lucide-react";
+import { categories } from "@/lib/categories";
 
-const categories = [
-  "Food and beverages",
-  "Pharmaceuticals and health",
-  "Cosmetics and personal care",
-  "Electronics and appliances",
-  "Agrochemicals and fertilizers",
-  "Auto parts",
-  "Building materials",
-  "Household goods",
-  "Other",
-];
-
-const MAX_LOGO = 2 * 1024 * 1024; // 2 MB
-const MAX_DOC = 5 * 1024 * 1024; // 5 MB
+const MAX_LOGO = 1_000_000; // 1 MB
+const MAX_DOC = 3_000_000; // 3 MB each
+const MAX_TOTAL = 4_000_000; // 4 MB in total (the host rejects bigger requests)
 const MAX_DOCS = 5;
 const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const DOC_TYPES = ["application/pdf", "image/png", "image/jpeg"];
@@ -32,10 +22,48 @@ type Fields = {
 };
 type Errors = Partial<Record<keyof Fields | "logo" | "documents", string>>;
 
-/* TODO: replace with your real API call. Send `data` as multipart/form-data. */
 async function submitApplication(data: FormData) {
-  void data;
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const res = await fetch("/api/onboarding", { method: "POST", body: data });
+  if (!res.ok) {
+    let message = "We couldn’t send your application. Try again.";
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) message = body.error;
+    } catch {}
+    throw new Error(message);
+  }
+}
+
+/** Phone photos are big. This makes JPG and PNG images smaller before they upload. */
+async function shrink(file: File, maxSide: number, keepTransparency: boolean): Promise<File> {
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
+    const png = keepTransparency && file.type !== "image/jpeg";
+    if (!png) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const type = png ? "image/png" : "image/jpeg";
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.8));
+    if (!blob || blob.size >= file.size) return file; // keep the original if nothing was gained
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + (png ? ".png" : ".jpg"), { type });
+  } catch {
+    return file;
+  }
 }
 
 function formatSize(bytes: number) {
@@ -124,26 +152,26 @@ export function OnboardingForm() {
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
-  function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    if (!LOGO_TYPES.includes(file.type)) {
+  async function onLogoChange(e: ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    if (!picked) return;
+    if (!LOGO_TYPES.includes(picked.type)) {
       setErrors((p) => ({ ...p, logo: "Use a PNG, JPG or WebP image." }));
-      e.target.value = "";
       return;
     }
+    const file = await shrink(picked, 800, true);
     if (file.size > MAX_LOGO) {
-      setErrors((p) => ({ ...p, logo: "The logo must be smaller than 2 MB." }));
-      e.target.value = "";
+      setErrors((p) => ({ ...p, logo: "The logo is too large. Use an image under 1 MB." }));
       return;
     }
     setErrors((p) => ({ ...p, logo: undefined }));
     setLogo(file);
   }
 
-  function onDocsChange(e: ChangeEvent<HTMLInputElement>) {
-    const picked = Array.from(e.target.files ?? []);
-    e.target.value = "";
+  async function onDocsChange(e: ChangeEvent<HTMLInputElement>) {
+    const input = e.target;
+    const picked = Array.from(input.files ?? []);
+    input.value = "";
     if (picked.length === 0) return;
 
     const bad = picked.find((f) => !DOC_TYPES.includes(f.type));
@@ -151,17 +179,23 @@ export function OnboardingForm() {
       setErrors((p) => ({ ...p, documents: `“${bad.name}” isn’t allowed. Use PDF, PNG or JPG files.` }));
       return;
     }
-    const big = picked.find((f) => f.size > MAX_DOC);
-    if (big) {
-      setErrors((p) => ({ ...p, documents: `“${big.name}” is larger than 5 MB.` }));
-      return;
-    }
     if (docs.length + picked.length > MAX_DOCS) {
       setErrors((p) => ({ ...p, documents: `You can upload up to ${MAX_DOCS} documents.` }));
       return;
     }
+    const ready = await Promise.all(picked.map((f) => shrink(f, 1600, false)));
+    const big = ready.find((f) => f.size > MAX_DOC);
+    if (big) {
+      setErrors((p) => ({ ...p, documents: `“${big.name}” is larger than 3 MB. Use a smaller file.` }));
+      return;
+    }
+    const total = [...docs, ...ready].reduce((n, f) => n + f.size, 0) + (logo?.size ?? 0);
+    if (total > MAX_TOTAL) {
+      setErrors((p) => ({ ...p, documents: "Your files add up to more than 4 MB. Remove one or use smaller files." }));
+      return;
+    }
     setErrors((p) => ({ ...p, documents: undefined }));
-    setDocs((prev) => [...prev, ...picked]);
+    setDocs((prev) => [...prev, ...ready]);
   }
 
   function validate(): Errors {
@@ -179,6 +213,8 @@ export function OnboardingForm() {
     if (!fields.category) e.category = "Choose a product category.";
     if (!logo) e.logo = "Upload your business logo.";
     if (docs.length === 0) e.documents = "Upload at least one verification document.";
+    else if (docs.reduce((n, f) => n + f.size, 0) + (logo?.size ?? 0) > MAX_TOTAL)
+      e.documents = "Your files add up to more than 4 MB. Remove one or use smaller files.";
     return e;
   }
 
@@ -203,8 +239,12 @@ export function OnboardingForm() {
     try {
       await submitApplication(data);
       router.push("/pending");
-    } catch {
-      setFormError("We couldn’t send your application. Check your connection and try again.");
+    } catch (err) {
+      setFormError(
+        err instanceof Error && !(err instanceof TypeError)
+          ? err.message
+          : "We couldn’t send your application. Check your connection and try again.",
+      );
       setSubmitting(false);
     }
   }
@@ -255,7 +295,7 @@ export function OnboardingForm() {
       </Section>
 
       <Section title="Logo">
-        <Field id="logo" label="Business logo" error={errors.logo} hint="PNG, JPG or WebP, up to 2 MB.">
+        <Field id="logo" label="Business logo" error={errors.logo} hint="PNG, JPG or WebP, up to 1 MB. Big photos are made smaller for you.">
           <div className="flex items-center gap-4">
             <div className="grid size-20 shrink-0 place-items-center overflow-hidden rounded-md border border-line bg-white">
               {logoUrl ? (
@@ -273,7 +313,7 @@ export function OnboardingForm() {
 
       <Section title="Verification documents">
         <Field id="documents" label="Documents that prove your business is real" error={errors.documents}
-          hint={`For example, your business registration certificate and any product registration that applies to you. PDF, PNG or JPG, up to 5 MB each, ${MAX_DOCS} files at most.`}>
+          hint={`For example, your business registration certificate and any product registration that applies to you. PDF, PNG or JPG, up to 3 MB each and 4 MB in total, ${MAX_DOCS} files at most. Photos are made smaller for you.`}>
           <input id="documents" type="file" multiple accept={DOC_TYPES.join(",")}
             onChange={onDocsChange} disabled={docs.length >= MAX_DOCS} className={fileClass} {...aria("documents")} />
         </Field>

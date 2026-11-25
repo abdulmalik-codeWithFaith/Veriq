@@ -41,10 +41,6 @@ const codes: Code[] = [
   { code: "XF5J7GBE", product: "Orange Juice 1L", batch: "Nov 2026", createdAt: "2026-11-21T09:15:00Z", copied: true, verifiedCount: 0 },
 ];
 
-export async function getCompany() {
-  return { name: "Greenfield Beverages Ltd" };
-}
-
 export async function getCodes(): Promise<Code[]> {
   return codes;
 }

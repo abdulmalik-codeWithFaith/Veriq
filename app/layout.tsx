@@ -54,7 +54,7 @@ function Logo() {
 
 function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+    <header data-site-chrome className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
         <Logo />
 
@@ -137,7 +137,7 @@ async function CurrentYear() {
 
 function Footer() {
   return (
-    <footer className="bg-ink text-white">
+    <footer data-site-chrome className="bg-ink text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-10 sm:px-8 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="flex items-center gap-2 font-serif text-lg font-semibold">
@@ -177,6 +177,7 @@ export default function RootLayout({
     <html lang="en" className={`${publicSans.variable} ${sourceSerif.variable}`}>
       <body className="flex min-h-screen flex-col">
         <a
+          data-site-chrome
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold"
         >

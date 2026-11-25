@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { requireAdmin } from "@/lib/auth/session";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileText } from "lucide-react";
 import { formatDate, getApplication, statusLabels, statusStyles } from "../../data";
@@ -16,7 +17,7 @@ async function Review({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // TODO: protect this page. Only the admin account may open it (check on the server).
+  await requireAdmin();
   const app = await getApplication(id);
   if (!app) notFound();
 
@@ -41,12 +42,17 @@ async function Review({
       </Link>
 
       <div className="mt-6 flex flex-wrap items-center gap-4">
-        <span
-          aria-hidden="true"
-          className="grid size-14 place-items-center rounded-md bg-ink font-serif text-xl font-semibold text-white"
-        >
-          {app.businessName.charAt(0)}
-        </span>
+        {app.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={app.logoUrl} alt="" className="size-14 rounded-md border border-line bg-white object-contain" />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="grid size-14 place-items-center rounded-md bg-ink font-serif text-xl font-semibold text-white"
+          >
+            {app.businessName.charAt(0)}
+          </span>
+        )}
         <div>
           <h1 className="font-serif text-3xl font-semibold tracking-tight">{app.businessName}</h1>
           <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[app.status]}`}>
@@ -54,7 +60,6 @@ async function Review({
           </span>
         </div>
       </div>
-      {/* TODO: show the uploaded logo here instead of the first letter. */}
 
       <section className="mt-10 border-t-2 border-ink pt-5">
         <h2 className="font-serif text-xl font-semibold">Business information</h2>

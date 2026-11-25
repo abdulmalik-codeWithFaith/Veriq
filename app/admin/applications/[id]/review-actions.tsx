@@ -4,21 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, Loader2, X } from "lucide-react";
-
-/*
-  TODO: replace both with real server calls.
-  approveCompany: set status to "approved", then email the company that it can now log in.
-  rejectCompany: set status to "rejected", save the reason, then email the company the reason.
-*/
-async function approveCompany(id: string) {
-  void id;
-  await new Promise((resolve) => setTimeout(resolve, 800));
-}
-async function rejectCompany(id: string, reason: string) {
-  void id;
-  void reason;
-  await new Promise((resolve) => setTimeout(resolve, 800));
-}
+import { approveCompany, rejectCompany } from "@/app/admin/actions";
 
 export function ReviewActions({ id, businessName }: { id: string; businessName: string }) {
   const router = useRouter();

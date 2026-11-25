@@ -4,26 +4,26 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 
-type AccountStatus = "admin" | "approved" | "pending" | "rejected";
-
-/*
-  TODO: replace with your real login call.
-  It should return the account's role/status so we know where to send the person:
-  admin -> /admin, approved -> /dashboard, pending -> /pending, rejected -> /rejected.
-*/
-async function logIn(email: string, password: string): Promise<AccountStatus> {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  if (!email || !password) throw new Error("invalid");
-  return "pending";
+async function logIn(email: string, password: string): Promise<string> {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const idToken = await cred.user.getIdToken();
+  const res = await fetch("/api/session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken }),
+  });
+  await signOut(auth); // our secure cookie is the real session
+  if (!res.ok) {
+    const info = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    throw new Error(`session ${res.status}: ${info.error ?? "unknown"} ${info.detail ?? ""}`.trim());
+  }
+  // The server decides where this person belongs: admin, dashboard, pending, rejected or onboarding.
+  const data = (await res.json()) as { destination: string };
+  return data.destination;
 }
-
-const destinations: Record<AccountStatus, string> = {
-  admin: "/admin",
-  approved: "/dashboard",
-  pending: "/pending",
-  rejected: "/rejected",
-};
 
 export function LoginForm() {
   const router = useRouter();
@@ -44,10 +44,21 @@ export function LoginForm() {
 
     setSubmitting(true);
     try {
-      const status = await logIn(email.trim(), password);
-      router.push(destinations[status]);
-    } catch {
-      setError("The email or password is wrong. Check them and try again.");
+      const destination = await logIn(email.trim(), password);
+      router.push(destination);
+    } catch (err) {
+      console.error("Login failed:", err);
+      const code = (err as { code?: string }).code;
+      if (code === "auth/too-many-requests") {
+        setError("Too many attempts. Wait a few minutes and try again.");
+      } else if (code === "auth/network-request-failed") {
+        setError("No internet connection. Check it and try again.");
+      } else if (err instanceof Error && err.message.startsWith("session ") && process.env.NODE_ENV === "development") {
+        // Only while developing: the account is fine, but our server step failed.
+        setError(`Setup problem (only shown while developing): ${err.message}`);
+      } else {
+        setError("The email or password is wrong. Check them and try again.");
+      }
       setSubmitting(false);
     }
   }

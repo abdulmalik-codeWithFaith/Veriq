@@ -1,10 +1,22 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { destinationFor, requireCompany } from "@/lib/auth/session";
 import { OnboardingForm } from "./onboarding-form";
 
 export const metadata: Metadata = {
   title: "Business details",
   description: "Tell Veriq about your business so we can review and approve your account.",
 };
+
+// Only signed-in companies that haven't sent the form yet (or were rejected) see the form.
+async function Gate() {
+  const session = await requireCompany();
+  if (session.status !== "incomplete" && session.status !== "rejected") {
+    redirect(destinationFor(session));
+  }
+  return <OnboardingForm />;
+}
 
 export default function OnboardingPage() {
   return (
@@ -17,7 +29,9 @@ export default function OnboardingPage() {
         trusted by customers. You’ll get an email when your application is
         approved or if we need more information.
       </p>
-      <OnboardingForm />
+      <Suspense fallback={<p className="mt-10 text-muted">Loading</p>}>
+        <Gate />
+      </Suspense>
     </div>
   );
 }

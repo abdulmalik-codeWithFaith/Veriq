@@ -6,7 +6,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { clientAuth } from "@/lib/firebase/client";
 
 type Values = { name: string; email: string; password: string; terms: boolean };
 type Errors = Partial<Record<keyof Values, string>>;
@@ -23,14 +23,14 @@ function validate(v: Values): Errors {
 }
 
 async function createAccount(values: Values): Promise<string> {
-  const cred = await createUserWithEmailAndPassword(auth, values.email.trim(), values.password);
+  const cred = await createUserWithEmailAndPassword(clientAuth(), values.email.trim(), values.password);
   const idToken = await cred.user.getIdToken();
   const res = await fetch("/api/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken, name: values.name.trim() }),
   });
-  await signOut(auth); // our secure cookie is the real session
+  await signOut(clientAuth()); // our secure cookie is the real session
   if (!res.ok) {
     const info = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
     throw new Error(`session ${res.status}: ${info.error ?? "unknown"} ${info.detail ?? ""}`.trim());

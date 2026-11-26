@@ -5,17 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { clientAuth } from "@/lib/firebase/client";
 
 async function logIn(email: string, password: string): Promise<string> {
-  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const cred = await signInWithEmailAndPassword(clientAuth(), email, password);
   const idToken = await cred.user.getIdToken();
   const res = await fetch("/api/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken }),
   });
-  await signOut(auth); // our secure cookie is the real session
+  await signOut(clientAuth()); // our secure cookie is the real session
   if (!res.ok) {
     const info = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
     throw new Error(`session ${res.status}: ${info.error ?? "unknown"} ${info.detail ?? ""}`.trim());

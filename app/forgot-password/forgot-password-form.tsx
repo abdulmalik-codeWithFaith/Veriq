@@ -4,17 +4,17 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Loader2, MailCheck } from "lucide-react";
-import { auth } from "@/lib/firebase/client";
+import { clientAuth } from "@/lib/firebase/client";
 
 async function sendReset(email: string) {
   try {
     // After resetting, Firebase offers a button back to our login page.
-    await sendPasswordResetEmail(auth, email, { url: `${window.location.origin}/login` });
+    await sendPasswordResetEmail(clientAuth(), email, { url: `${window.location.origin}/login` });
   } catch (err) {
     const code = (err as { code?: string }).code;
     // The site's address is not yet in Firebase's "Authorized domains". The email still works without the button.
     if (code === "auth/unauthorized-continue-uri" || code === "auth/invalid-continue-uri") {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(clientAuth(), email);
       return;
     }
     throw err;

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, Copy, Search } from "lucide-react";
 import { codeStatus, formatDate, type Code, type CodeStatus } from "../data";
 import { StatusBadge } from "../status-badge";
+import { markCodeCopied } from "./actions";
 
 type Filter = "all" | CodeStatus;
 
@@ -15,12 +16,7 @@ const filters: { value: Filter; label: string }[] = [
   { value: "used", label: "Used" },
 ];
 
-/* TODO: save this on the server. Only set the "copied" flag. Never touch verification data. */
-async function markCodeCopied(code: string) {
-  void code;
-}
-
-export function CodesTable({ initialCodes }: { initialCodes: Code[] }) {
+export function CodesTable({ initialCodes, total }: { initialCodes: Code[]; total: number }) {
   const [codes, setCodes] = useState(initialCodes);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -54,7 +50,11 @@ export function CodesTable({ initialCodes }: { initialCodes: Code[] }) {
     setJustCopied(c.code);
     setMessage(`Copied ${c.code}`);
     setTimeout(() => setJustCopied((cur) => (cur === c.code ? null : cur)), 1500);
-    await markCodeCopied(c.code);
+    try {
+      await markCodeCopied(c.code);
+    } catch {
+      setMessage("Copied, but we couldn’t save the copied mark. Try again.");
+    }
   }
 
   if (codes.length === 0) {
@@ -172,6 +172,11 @@ export function CodesTable({ initialCodes }: { initialCodes: Code[] }) {
           </tbody>
         </table>
       </div>
+      {total > initialCodes.length && (
+        <p className="mt-3 text-sm text-muted">
+          Showing your latest {initialCodes.length.toLocaleString("en-GB")} of {total.toLocaleString("en-GB")} codes.
+        </p>
+      )}
     </div>
   );
 }

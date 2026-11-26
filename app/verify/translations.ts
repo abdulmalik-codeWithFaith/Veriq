@@ -31,6 +31,8 @@ export type Strings = {
   invalidBody: string;
   errorTitle: string;
   errorBody: string;
+  limitTitle: string;
+  limitBody: string;
   manufacturer: string;
   product: string;
   details: string;
@@ -56,6 +58,8 @@ export const translations: Record<Lang, Strings> = {
     invalidBody: "Check the characters and try again. If the code is correct, do not trust this product.",
     errorTitle: "Something went wrong",
     errorBody: "We couldn’t check this code. Check your connection and try again.",
+    limitTitle: "Too many attempts",
+    limitBody: "Please wait a few minutes and try again.",
     manufacturer: "Manufacturer",
     product: "Product",
     details: "Product information",
@@ -79,6 +83,8 @@ export const translations: Record<Lang, Strings> = {
     invalidBody: "Vérifiez les caractères et réessayez. Si le code est correct, ne faites pas confiance à ce produit.",
     errorTitle: "Un problème est survenu",
     errorBody: "Nous n’avons pas pu vérifier ce code. Vérifiez votre connexion et réessayez.",
+    limitTitle: "Trop de tentatives",
+    limitBody: "Veuillez patienter quelques minutes, puis réessayer.",
     manufacturer: "Fabricant",
     product: "Produit",
     details: "Informations sur le produit",
@@ -102,6 +108,8 @@ export const translations: Record<Lang, Strings> = {
     invalidBody: "Ṣàyẹ̀wò àwọn ọ̀rọ̀ àti nọ́ńbà náà, kí o tún gbìyànjú. Tí kóòdù náà bá tọ́, má ṣe gbẹ́kẹ̀lé ọjà yìí.",
     errorTitle: "Nǹkan kan ṣẹlẹ̀",
     errorBody: "A kò lè ṣàyẹ̀wò kóòdù yìí. Ṣàyẹ̀wò ìkànnì rẹ kí o tún gbìyànjú.",
+    limitTitle: "Ìgbìyànjú ti pọ̀ jù",
+    limitBody: "Jọ̀wọ́ dúró fún ìṣẹ́jú díẹ̀, kí o tún gbìyànjú.",
     manufacturer: "Olùpèsè",
     product: "Ọjà",
     details: "Àlàyé nípa ọjà",
@@ -125,6 +133,8 @@ export const translations: Record<Lang, Strings> = {
     invalidBody: "Duba haruffan da lambobin, ka sake gwadawa. Idan lambar daidai ce, kada ka amince da wannan samfurin.",
     errorTitle: "Wani abu ya faru",
     errorBody: "Ba mu iya duba wannan lambar ba. Duba haɗin intanet ɗinka, ka sake gwadawa.",
+    limitTitle: "An yi yunƙuri da yawa",
+    limitBody: "Da fatan za ka jira na ɗan mintuna, sannan ka sake gwadawa.",
     manufacturer: "Mai ƙera",
     product: "Samfur",
     details: "Bayanin samfur",
@@ -148,6 +158,8 @@ export const translations: Record<Lang, Strings> = {
     invalidBody: "Lelee mkpụrụedemede na ọnụọgụ ndị ahụ, nwaa ọzọ. Ọ bụrụ na koodu ahụ ziri ezi, ekwela ngwaahịa a ntụkwasị obi.",
     errorTitle: "Ihe mere",
     errorBody: "Anyị enweghị ike ịnyocha koodu a. Lelee njikọ ịntanetị gị, nwaa ọzọ.",
+    limitTitle: "Ọtụtụ mbọ ka e mere",
+    limitBody: "Biko chere nkeji ole na ole, nwaa ọzọ.",
     manufacturer: "Onye na-emepụta ya",
     product: "Ngwaahịa",
     details: "Ozi banyere ngwaahịa",

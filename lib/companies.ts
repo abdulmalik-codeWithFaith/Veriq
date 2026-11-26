@@ -75,3 +75,24 @@ export async function listCompanies(): Promise<Company[]> {
 export function fileUrl(uid: string, fileId: string): string {
   return `/api/admin/files/${uid}/${fileId}`;
 }
+
+/** Puts a stored file (logo or document) back together from its chunks. */
+export async function readFile(
+  uid: string,
+  fileId: string,
+): Promise<{ body: Buffer; contentType: string; name: string } | null> {
+  const db = adminDb();
+  const fileRef = db.collection("companies").doc(uid).collection("files").doc(fileId);
+  const meta = await fileRef.get();
+  if (!meta.exists) return null;
+
+  const count = Number(meta.get("chunks")) || 0;
+  const parts = count
+    ? await db.getAll(...Array.from({ length: count }, (_, i) => fileRef.collection("chunks").doc(String(i))))
+    : [];
+  return {
+    body: Buffer.concat(parts.map((p) => Buffer.from(p.get("data") as Uint8Array))),
+    contentType: String(meta.get("contentType") ?? "application/octet-stream"),
+    name: String(meta.get("name") ?? fileId),
+  };
+}

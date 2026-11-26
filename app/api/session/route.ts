@@ -1,5 +1,5 @@
 import { getSession } from "@/lib/auth/session";
-import { adminDb } from "@/lib/firebase/admin";
+import { readFile } from "@/lib/companies";
 
 // Lets the admin open a company's logo or document. Nobody else can.
 export async function GET(
@@ -14,21 +14,13 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   }
 
-  const db = adminDb();
-  const fileRef = db.collection("companies").doc(uid).collection("files").doc(fileId);
-  const meta = await fileRef.get();
-  if (!meta.exists) return new Response("Not found", { status: 404 });
+  const file = await readFile(uid, fileId);
+  if (!file) return new Response("Not found", { status: 404 });
 
-  const count = Number(meta.get("chunks")) || 0;
-  const parts = count
-    ? await db.getAll(...Array.from({ length: count }, (_, i) => fileRef.collection("chunks").doc(String(i))))
-    : [];
-  const body = Buffer.concat(parts.map((p) => Buffer.from(p.get("data") as Uint8Array)));
-
-  const name = String(meta.get("name") ?? fileId).replace(/[^\w.\- ]+/g, "_");
-  return new Response(new Uint8Array(body), {
+  const name = file.name.replace(/[^\w.\- ]+/g, "_");
+  return new Response(new Uint8Array(file.body), {
     headers: {
-      "Content-Type": String(meta.get("contentType") ?? "application/octet-stream"),
+      "Content-Type": file.contentType,
       "Content-Disposition": `inline; filename="${name}"`,
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",

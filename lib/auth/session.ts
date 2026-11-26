@@ -55,6 +55,22 @@ export const getSession = cache(async (): Promise<Session | null> => {
   }
 });
 
+/**
+ * A cheap check for the header only: who is signed in, so it can show the right links.
+ * It does not check revocation or the company's status, so it must NEVER be used to protect a page.
+ * Pages use requireAdmin / requireApprovedCompany / requireCompany instead.
+ */
+export const getViewer = cache(async (): Promise<{ role: "admin" | "company"; email: string } | null> => {
+  const cookie = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!cookie) return null;
+  try {
+    const decoded = await adminAuth().verifySessionCookie(cookie, false);
+    return { role: decoded.admin === true ? "admin" : "company", email: decoded.email ?? "" };
+  } catch {
+    return null;
+  }
+});
+
 export async function requireAdmin() {
   const s = await getSession();
   if (!s) redirect("/login");

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { codeStatus, formatDate, getCodes, getStats } from "./data";
+import { requireApprovedCompany } from "@/lib/auth/session";
+import { getCodes, getStats } from "@/lib/codes";
+import { codeStatus, formatDate } from "./data";
 import { StatusBadge } from "./status-badge";
 
 export const metadata: Metadata = { title: "Overview" };
 
 export default async function OverviewPage() {
-  const [stats, codes] = await Promise.all([getStats(), getCodes()]);
-  const recent = [...codes].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const session = await requireApprovedCompany();
+  const [stats, recent] = await Promise.all([getStats(session.uid), getCodes(session.uid, 5)]);
 
   const items = [
     { label: "Codes generated", value: stats.total, note: "All codes you have created" },

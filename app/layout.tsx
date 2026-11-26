@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Public_Sans, Source_Serif_4 } from "next/font/google";
+import { Suspense } from "react";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
 import { Menu, ShieldCheck, X } from "lucide-react";
 import "./globals.css";
+import { AuthActions } from "./auth-actions";
 
 const publicSans = Public_Sans({
   subsets: ["latin"],
@@ -71,20 +73,10 @@ function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/login"
-            className="rounded-md px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-paper"
-          >
-            Log in
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-          >
-            Sign up
-          </Link>
-        </div>
+        {/* Shows Log in / Sign up, or Dashboard / Log out. The empty box keeps the header from jumping. */}
+        <Suspense fallback={<div className="hidden h-10 w-44 md:block" aria-hidden="true" />}>
+          <AuthActions variant="desktop" />
+        </Suspense>
 
         {/* Mobile navigation (no JavaScript needed) */}
         <details className="group relative md:hidden">
@@ -108,20 +100,9 @@ function Header() {
                 {link.label}
               </Link>
             ))}
-            <div className="mt-2 grid grid-cols-2 gap-2 border-t border-line pt-3">
-              <Link
-                href="/login"
-                className="rounded-md border border-line px-3 py-2.5 text-center text-sm font-semibold text-ink"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-md bg-brand px-3 py-2.5 text-center text-sm font-semibold text-white"
-              >
-                Sign up
-              </Link>
-            </div>
+            <Suspense fallback={<div className="mt-2 h-14 border-t border-line" aria-hidden="true" />}>
+              <AuthActions variant="mobile" />
+            </Suspense>
           </nav>
         </details>
       </div>
@@ -158,6 +139,12 @@ function Footer() {
           </Link>
           <Link href="/signup" className="text-white/85 hover:text-white">
             Sign up
+          </Link>
+          <Link href="/terms" className="text-white/85 hover:text-white">
+            Terms
+          </Link>
+          <Link href="/privacy" className="text-white/85 hover:text-white">
+            Privacy
           </Link>
         </nav>
       </div>

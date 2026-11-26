@@ -13,21 +13,18 @@ type Result =
   | { status: "repeat"; count: number; manufacturer: Manufacturer; product: Product }
   | { status: "invalid" };
 
-/*
-  TODO: replace with a real server call.
-  The server must look the code up, add this check to its verification count (atomically),
-  and return the result. It should also limit how often one device or IP can try codes,
-  so nobody can guess codes by trial and error. This demo uses sample data only.
-*/
+class LimitError extends Error {}
+
+// The server looks the code up, counts this check, and limits repeated wrong guesses.
 async function verifyCode(code: string): Promise<Result> {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  const sample = {
-    manufacturer: { name: "Greenfield Beverages Ltd" },
-    product: { name: "Pure Spring Water 75cl", details: "Batch Nov 2026. Best before Nov 2027." },
-  };
-  if (code === "VR8K29PX") return { status: "genuine", ...sample };
-  if (code === "AB7M42QX") return { status: "repeat", count: 3, ...sample };
-  return { status: "invalid" };
+  const res = await fetch("/api/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (res.status === 429) throw new LimitError();
+  if (!res.ok) throw new Error("verify");
+  return (await res.json()) as Result;
 }
 
 const looks = {
@@ -35,6 +32,7 @@ const looks = {
   repeat: { Icon: TriangleAlert, box: "border-amber bg-amber-soft", accent: "text-amber" },
   invalid: { Icon: XCircle, box: "border-danger bg-danger-soft", accent: "text-danger" },
   error: { Icon: XCircle, box: "border-danger bg-danger-soft", accent: "text-danger" },
+  limited: { Icon: TriangleAlert, box: "border-amber bg-amber-soft", accent: "text-amber" },
 } as const;
 
 export function VerifyForm() {
@@ -47,7 +45,7 @@ export function VerifyForm() {
   const [code, setCode] = useState(params.get("code") ?? "");
   const [busy, setBusy] = useState(false);
   const [empty, setEmpty] = useState(false);
-  const [result, setResult] = useState<Result | "error" | null>(null);
+  const [result, setResult] = useState<Result | "error" | "limited" | null>(null);
 
   const t = translations[lang];
 
@@ -64,8 +62,8 @@ export function VerifyForm() {
     setResult(null);
     try {
       setResult(await verifyCode(clean));
-    } catch {
-      setResult("error");
+    } catch (err) {
+      setResult(err instanceof LimitError ? "limited" : "error");
     }
     setBusy(false);
   }
@@ -90,15 +88,17 @@ export function VerifyForm() {
     inputRef.current?.focus();
   }
 
-  const key = result === "error" ? "error" : result?.status;
+  const key = result === "error" || result === "limited" ? result : result?.status;
   const look = key ? looks[key] : null;
   const title = key
-    ? { genuine: t.genuineTitle, repeat: t.repeatTitle, invalid: t.invalidTitle, error: t.errorTitle }[key]
+    ? { genuine: t.genuineTitle, repeat: t.repeatTitle, invalid: t.invalidTitle, error: t.errorTitle, limited: t.limitTitle }[key]
     : "";
   const body =
     result === "error"
       ? t.errorBody
-      : result?.status === "genuine"
+      : result === "limited"
+        ? t.limitBody
+        : result?.status === "genuine"
         ? t.genuineBody
         : result?.status === "repeat"
           ? t.repeatBody.replace("{count}", String(result.count))
@@ -183,7 +183,7 @@ export function VerifyForm() {
                   </div>
                 </div>
 
-                {result !== "error" && result.status !== "invalid" && (
+                {typeof result === "object" && result.status !== "invalid" && (
                   <div className="mt-4 rounded-lg border border-line bg-white p-5">
                     <div className="flex items-center gap-4">
                       {result.manufacturer.logoUrl ? (

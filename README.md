@@ -12,12 +12,12 @@ A company registers and is reviewed by the platform admin. Once approved, it cre
 | Business onboarding with documents and logo | Done, saves to Firestore |
 | Admin review, approve and reject | Done, real data |
 | Pending and rejected pages | Done, real status |
-| Manufacturer dashboard (overview, codes, generate, settings) | Screens done, **still sample data** |
-| Customer verification page (5 languages) | Screen done, **still sample data** |
+| Manufacturer dashboard (overview, codes, generate, settings) | Done, real data |
+| Customer verification page (5 languages) and embed widget | Done, real data, with guess protection |
 | Emails (approved / rejected) | Not built |
 | Log out, forgot password, terms, privacy | Not built |
 
-The product is not ready to launch until code generation and verification run on the server. See [What is left](#what-is-left).
+The core product works end to end. See [What is left](#what-is-left) before launching.
 
 ## Tech stack
 
@@ -105,6 +105,10 @@ The browser never reads or writes Firestore. All data goes through server code (
 
 Logos and documents are stored in Firestore, in `companies/{uid}/files/{fileId}`. Big files are split into chunks of 800 KB, because a Firestore document holds at most 1 MiB. Only the admin can open them, through `/api/admin/files/...`.
 
+`companies/{uid}/codes/{CODE}`: `product`, `details`, `batchId`, `copied`, `verifiedCount`, `createdAt`, `firstVerifiedAt`, `lastVerifiedAt`.
+`codeIndex/{CODE}`: `{ companyId }`, so a customer's check finds the owner with one read.
+`rateLimits/{key}`: `count` and `windowStart`, for guess protection. The key is a hash of the visitor's IP address. The address itself is never stored.
+
 ### Code states (important)
 
 Each code tracks three separate things:
@@ -139,17 +143,19 @@ firestore.rules                           reference copy of the Firestore rules
 
 ## Notes
 
+- **Automatic clean-up of guessing records:** in the Firebase console, open Firestore, TTL, and add a policy for collection group `rateLimits` on the field `expireAt`. Without it, these small records are never deleted, and the privacy policy says they are.
 - **Upload limit:** onboarding files total 4 MB at most, because Vercel rejects larger requests. Photos are shrunk in the browser automatically. PDFs are not.
 - **Cache Components:** any page that reads cookies, `params` or `searchParams` must keep that read inside a `<Suspense>` boundary, or the build fails.
 - **Path alias:** imports use `@/`. This needs `"paths": { "@/*": ["./*"] }` in `tsconfig.json` (the default).
+- **How a check works:** the first check of a code says "genuine". Every later check says "checked before" with the number of checks. A visitor who tries 10 well-formed but unknown codes within 10 minutes is blocked for the rest of that window. Verification only happens when the page runs in a browser, so link previews (for example in WhatsApp) don't count as checks.
+- **Costs:** each customer check is about 3 reads and 1 write in Firestore. The free plan allows roughly 20,000 writes a day. The codes page reads at most the latest 200 codes.
 - **Embed widget:** the widget is an iframe of `/embed/verify`. If you add security headers that block iframes, make an exception for `/embed/*`.
 - **Translations:** the Yoruba, Hausa and Igbo texts in `app/verify/translations.ts` must be reviewed by native speakers before launch.
 
 ## What is left
 
-1. **Real code generation:** create unique codes on the server and save them in Firestore. Wire the codes list, overview counts and the copied flag.
-2. **Real verification:** look up the code, record every check, flag repeated checks, limit guessing attempts, and show the real manufacturer, logo and product.
-3. **Emails:** tell companies when they are approved or rejected (look for the `TODO` comments in `app/admin/actions.ts`).
-4. **Missing pages:** log out button, forgot password, terms of use, privacy policy.
-5. **Deployment:** environment variables in Vercel, real domain for share links and the embed code, real support email in `app/rejected/page.tsx`.
-6. **Later:** editing company details and logo, bulk QR export, uploads over 4 MB, email confirmation at signup.
+1. **Test with real data:** generate codes, verify them on your phone, check the counts and the repeat warning.
+2. **Emails:** tell companies when they are approved or rejected (look for the `TODO` comments in `app/admin/actions.ts`).
+3. **Legal pages:** fill in your name, email and address in `app/legal.tsx`, then have a lawyer review `app/terms/page.tsx` and `app/privacy/page.tsx`.
+4. **Deployment:** environment variables in Vercel, real domain for share links and the embed code, real support email in `app/rejected/page.tsx`.
+5. **Later:** pagination and filters for very large code lists, a way to suspend a company or a code, editing company details and logo, bulk QR export, uploads over 4 MB, email confirmation at signup.

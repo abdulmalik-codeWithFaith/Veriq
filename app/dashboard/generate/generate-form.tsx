@@ -3,30 +3,13 @@
 import { useEffect, useState, type FormEvent } from "react";
 import QRCode from "qrcode";
 import { Download, Loader2 } from "lucide-react";
+import { generateCodes } from "./actions";
 
 type Format = "text" | "qr";
 type Errors = { product?: string; quantity?: string };
 
 const MAX_BATCH = 1000;
 const QR_PREVIEW = 24;
-// No 0, O, 1, I or L, so codes are easy to read and type.
-const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-
-/*
-  TODO: generate on the SERVER, not in the browser.
-  The server must create unique codes, save them against the company and product,
-  and return them. This demo version only shows the flow.
-*/
-async function generateCodes(input: { product: string; details: string; quantity: number }) {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  const set = new Set<string>();
-  while (set.size < input.quantity) {
-    const bytes = crypto.getRandomValues(new Uint32Array(8));
-    set.add(Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join(""));
-  }
-  return [...set];
-}
-
 function verifyUrl(code: string) {
   return `${window.location.origin}/verify?code=${code}`;
 }
@@ -82,7 +65,7 @@ export function GenerateForm() {
     setBusy(true);
     setResult(null);
     try {
-      const codes = await generateCodes({ product: product.trim(), details: details.trim(), quantity: qty });
+      const { codes } = await generateCodes({ product: product.trim(), details: details.trim(), quantity: qty });
       setResult({ codes, product: product.trim(), format });
     } catch {
       setFormError("We couldn’t generate the codes. Try again.");
@@ -179,7 +162,7 @@ export function GenerateForm() {
           <h3 className="font-serif text-xl font-semibold">
             {result.codes.length.toLocaleString("en-GB")} codes created for {result.product}
           </h3>
-          <p className="mt-1 text-sm text-muted">They are saved to your account and ready to use.</p>
+          <p className="mt-1 text-sm text-muted">They are saved to your account and customers can verify them now.</p>
 
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" onClick={downloadCsv}
